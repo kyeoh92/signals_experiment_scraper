@@ -1,4 +1,6 @@
 from logging import root
+import re
+from urllib import response
 import requests
 import subprocess
 
@@ -34,68 +36,107 @@ def getAllExperimentIDs(keyword):
     responseData = response.json()
 
     for e in responseData['data']:
-        eids.append(e['id'])
-    
+        eids.append(e['attributes']['name'] +'|' + e['id'])
+
     return eids
 
-# Get all InChi stoichiometry from all experiments with keyword in their description
+# trim everything but numbers from string
+def trimToNumbers(s):
+    return re.sub(r'\D', '', s)
+
+# Process reactant to grab smile strings
+def getSmilesFromChemDraw(rowid, eid):
+    response = requests.get(url+"/stoichiometry/{eid}/{rowid}/structure?format=smiles".format(eid=eid, rowid=rowid), headers=authHeader)
+    return response.text
+
+# Get all .csv row data from all experiments with keyword in their description
 def getAllStoichiometry(keyword):
     eids = getAllExperimentIDs(keyword)
 
-    inchis = []
-    for eid in eids:
+    csvRows = []
+
+    for e in eids:
+        eid = e.split('|')[1] # grab experiment ID from "name|experimentID" string
+        csvRow = [] # object to store row to write to .csv
+        csvRow.append(e.split('|')[0]) # append source_id
         response = requests.get(url+"/stoichiometry/"+eid, headers=authHeader)
         responseData = response.json()
-        reactants = responseData['data'][0]['attributes']['reactants']
-        for r in reactants:
-            inchis.append(r['inchi'])
-        
-    return inchis
 
+        conditions = responseData['data'][0]['attributes']['conditions'][0]
+        summary = responseData['data'][0]['attributes']['summary']
+        solvents = responseData['data'][0]['attributes']['solvents']
+        reactants = responseData['data'][0]['attributes']['reactants']
+        products = responseData['data'][0]['attributes']['products']
+
+        # conditions 
+        csvRow.append(trimToNumbers(conditions.get('temperature', ''))) # append temperature_deg_c
+        csvRow.append(trimToNumbers(conditions.get('duration', ''))) # append time_h
+
+        # summary
+        csvRow.append(trimToNumbers(summary.get('limitingMolarity', ''))) #append scale_mol
+        csvRow.append(trimToNumbers(summary.get('reactionMolarity', ''))) #append concentration_mol_l
+
+        # solvents
+        for s in solvents:
+            csvRow.append(s.get('solvent', '')) # append solvent_#_cas
+
+        # reactants
+        for r in reactants:
+            csvRow.append(r.get('name', '')) # append catalyst_#_name
+            csvRow.append(r.get('IUPACName', '')) # append catalyst_#_cas
+            csvRow.append(getSmilesFromChemDraw(r['row_id'], eid)) # append catalyst_#_smiles
+            csvRow.append(r.get('eq', '')) # append catalyst_#_eq
+
+        # products
+        for p in products:
+            csvRow.append(getSmilesFromChemDraw(p['row_id'], eid)) # append product_#_smiles
+            csvRow.append(trimToNumbers(p.get('yield', ''))) # append product_#_yield
+
+        csvRows.append(csvRow)
+
+    return csvRows
+
+# region 
+# outdated obabel commands
 # Create InChi files from InChi strings
-def writeInChisToFile(inchis):
-    for i, inchi in enumerate(inchis):
-        with open(f"molecule_{i}.inchi", "w") as f:
-            f.write(inchi)
+# def writeInChisToFile(inchis):
+#     for i, inchi in enumerate(inchis):
+#         with open(f"molecule_{i}.inchi", "w") as f:
+#             f.write(inchi)
 
 # Get all CDXMLs from all experiments with keyword in their description
-def getAllCDXMLs(keyword):
-    eids = getAllExperimentIDs(keyword)
-
-    cdxmls = []
-    for eid in eids:
-        response = requests.get(url+"/stoichiometry/"+eid, headers=authHeader)
-        responseData = response.json()
-        reactantsData = responseData['data'][0]['attributes']['reactants']
-        for r in reactantsData:
-            cdxmls.append(r['_cdxml'])
-        
-    return cdxmls
+# def getAllCDXMLs(keyword):
+#     eids = getAllExperimentIDs(keyword)
+#     cdxmls = []
+#     for eid in eids:
+#         response = requests.get(url+"/stoichiometry/"+eid, headers=authHeader)
+#         responseData = response.json()
+#         reactantsData = responseData['data'][0]['attributes']['reactants']
+#         for r in reactantsData:
+#             cdxmls.append(r['_cdxml'])
+#         
+#     return cdxmls
 
 # Create CDXML files from CDXML strings
-def writeXMLFiles(xmls):
-    for i, xml in enumerate(xmls):
-        with open(f"molecule_{i}.cdxml", "w") as f:
-            f.write(xml)
+# def writeXMLFiles(xmls):
+#     for i, xml in enumerate(xmls):
+#         with open(f"molecule_{i}.cdxml", "w") as f:
+#             f.write(xml)
 
 # Use command line OpenBabel to convert from CDXML to SMILES string
-def runCmdLineConversionCDXMLtoMOLtoSMI(xmlFile):
-    molFile = xmlFile.replace('.cdxml', '.mol')
-    cmd = f"obabel -icdxml {xmlFile} -omol -O {molFile}"
-    subprocess.run(cmd, shell=True)
-    cmd2 = f"obabel -imol {molFile} -osmi -O {xmlFile.replace('.cdxml', '.smi')}"
-    subprocess.run(cmd2, shell=True)
+# def runCmdLineConversionCDXMLtoMOLtoSMI(xmlFile):
+#     molFile = xmlFile.replace('.cdxml', '.mol')
+#     cmd = f"obabel -icdxml {xmlFile} -omol -O {molFile}"
+#     subprocess.run(cmd, shell=True)
+#     cmd2 = f"obabel -imol {molFile} -osmi -O {xmlFile.replace('.cdxml', '.smi')}"
+#     subprocess.run(cmd2, shell=True)
 
 # Use command line OpenBabel to convert from InChi to SMILES string
-def runCmdLineConversionInChitoSMI(inputFile, outputFile):
-    cmd = f"obabel -iinchi {inputFile} -osmi -O {outputFile}"
-    subprocess.run(cmd, shell=True)
+# def runCmdLineConversionInChitoSMI(inputFile, outputFile):
+#     cmd = f"obabel -iinchi {inputFile} -osmi -O {outputFile}"
+#     subprocess.run(cmd, shell=True)
+# endregion
 
 searchKeyword = input("Keyword? ")
-inchis = getAllStoichiometry(searchKeyword)
-writeInChisToFile(inchis)
-
-writeXMLFiles(getAllCDXMLs(searchKeyword))
-
-for i in range(len(inchis)):
-    runCmdLineConversionInChitoSMI(f"molecule_{i}.inchi", f"molecule_{i}.smi")
+csvRows = getAllStoichiometry(searchKeyword)
+print(csvRows)
