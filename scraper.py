@@ -8,6 +8,20 @@ url = "https://ucberkeleysite.signalsresearch2.revvitycloud.com/api/rest/v1.0"
 apikey = "WPN8LoLt+odVKIM+D9RI89kcp/JjYWj2fUKylJLzeAts0JJ5fCnOjTGZrlm9/vVMNBRs4w=="
 authHeader = {"Content-Type":"application/vnd.api+json","x-api-key":apikey}
 
+# region
+# Helper methods
+
+# trim everything but numbers from string
+def trimToNumbers(s):
+    return re.sub(r'\D', '', s)
+
+# print [][]s to .csv
+def writeToCSV(rows):
+    with open('output.csv', 'w') as f:
+        for row in rows:
+            f.write('|'.join(row) + '\n')
+
+# endregion
 
 # Get all experiment IDs with keyword in their description
 def getAllExperimentIDs(keyword):
@@ -39,10 +53,6 @@ def getAllExperimentIDs(keyword):
         eids.append(e['attributes']['name'] +'|' + e['id'])
 
     return eids
-
-# trim everything but numbers from string
-def trimToNumbers(s):
-    return re.sub(r'\D', '', s)
 
 # Process reactant to grab smile strings
 def getSmilesFromChemDraw(rowid, eid):
@@ -140,3 +150,4 @@ def getAllStoichiometry(keyword):
 searchKeyword = input("Keyword? ")
 csvRows = getAllStoichiometry(searchKeyword)
 print(csvRows)
+writeToCSV(csvRows)

@@ -10,7 +10,7 @@ From each experiment, we are retrieving the following:
 This first five are "per experiment":
 * source_id - Experiment name
 * temperature_deg_c - /conditions attributes conditions temp (remove unit)
-* time_h - /conditions attributes conditions temp
+* time_h - /conditions attributes conditions duration
 * scale_mol - Limit Moles converted to moles !unit
 * concentration_mol_l - [summary][limitingmolarity]
 The rest are "per row". Repeat as necessary for # of solvents/catalysts/products:
