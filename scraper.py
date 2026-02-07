@@ -8,21 +8,23 @@ url = "https://ucberkeleysite.signalsresearch2.revvitycloud.com/api/rest/v1.0"
 apikey = "WPN8LoLt+odVKIM+D9RI89kcp/JjYWj2fUKylJLzeAts0JJ5fCnOjTGZrlm9/vVMNBRs4w=="
 authHeader = {"Content-Type":"application/vnd.api+json","x-api-key":apikey}
 
-# region
 # Helper methods
+# region
 
 # trim everything but numbers from string
 def trimToNumbers(s):
     return re.sub(r'\D', '', s)
 
 # print [][]s to .csv
-def writeToCSV(rows):
-    with open('output.csv', 'w') as f:
+def writeToCSV(rows, filename='output'):
+    with open(filename+'.csv', 'w') as f:
         for row in rows:
             f.write('|'.join(row) + '\n')
 
 # endregion
 
+# API methods
+# region
 # Get all experiment IDs with keyword in their description
 def getAllExperimentIDs(keyword):
     eids = []
@@ -105,9 +107,10 @@ def getAllStoichiometry(keyword):
         csvRows.append(csvRow)
 
     return csvRows
+# endregion
 
-# region 
 # outdated obabel commands
+# region 
 # Create InChi files from InChi strings
 # def writeInChisToFile(inchis):
 #     for i, inchi in enumerate(inchis):
@@ -150,4 +153,4 @@ def getAllStoichiometry(keyword):
 searchKeyword = input("Keyword? ")
 csvRows = getAllStoichiometry(searchKeyword)
 print(csvRows)
-writeToCSV(csvRows)
+writeToCSV(csvRows, searchKeyword)
