@@ -78,6 +78,16 @@ def getAllStoichiometry(keyword):
         solvents = responseData['data'][0]['attributes']['solvents']
         reactants = responseData['data'][0]['attributes']['reactants']
         products = responseData['data'][0]['attributes']['products']
+        included = responseData['included']
+        userColKey = ''
+
+        for i in included:
+            if i.get("type") == "columnDefinitions":
+                productColumnDefinitions = i['attributes']['products']
+                for pcd in productColumnDefinitions:
+                    if pcd.get("title") == "user_column":
+                        userColKey = pcd.get("key", '')
+
         solventCount = len(solvents)
         catalystCount = len(reactants)
         productCount = len(products)
@@ -108,6 +118,7 @@ def getAllStoichiometry(keyword):
         for p in products:
             csvRow.append(getSmilesFromChemDraw(p['row_id'], eid)) # append product_#_smiles
             csvRow.append(trimToNumbers(p.get('yield', ''))) # append product_#_yield
+            csvRow.append(p.get(userColKey, '')) # append product_#_user_column
 
         csvRows.append(csvRow)
 
@@ -128,6 +139,7 @@ def getAllStoichiometry(keyword):
     for i in range(1, productCount+1):
         headerRow.append('product_'+str(i)+'_smiles')
         headerRow.append('product_'+str(i)+'_yield')
+        headerRow.append('product_'+str(i)+'_user_column')
 
     csvRows.insert(0, headerRow)
     return csvRows
