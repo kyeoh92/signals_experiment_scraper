@@ -19,6 +19,5 @@ The rest are "per row". Repeat as necessary for # of solvents/catalysts/products
 * catalyst_#_cas - /stoichiometry attributes iupac name
 * catalyst_#_smiles - /stoichiometry/{cdid}/{rowid}/structure?format=smiles
 * catalyst_#_eq - /stoichiometry attributes eq
-* ligand_#_name - "start repeating last 4 until out of molecules" (what)
 * product_#_smiles - /products smiles (see if ?format=smiles exists)
 * product_#_yield - round to whole #, remove the %

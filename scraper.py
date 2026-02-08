@@ -66,11 +66,10 @@ def getAllStoichiometry(keyword):
     eids = getAllExperimentIDs(keyword)
 
     csvRows = []
+    solventCount, catalystCount, productCount = 0, 0, 0 # variables to keep track of how many catalysts and products
 
     for e in eids:
         eid = e.split('|')[1] # grab experiment ID from "name|experimentID" string
-        csvRow = [] # object to store row to write to .csv
-        csvRow.append(e.split('|')[0]) # append source_id
         response = requests.get(url+"/stoichiometry/"+eid, headers=authHeader)
         responseData = response.json()
 
@@ -79,6 +78,12 @@ def getAllStoichiometry(keyword):
         solvents = responseData['data'][0]['attributes']['solvents']
         reactants = responseData['data'][0]['attributes']['reactants']
         products = responseData['data'][0]['attributes']['products']
+        solventCount = len(solvents)
+        catalystCount = len(reactants)
+        productCount = len(products)
+
+        csvRow = [] # object to store row to write to .csv
+        csvRow.append(e.split('|')[0]) # append source_id
 
         # conditions 
         csvRow.append(trimToNumbers(conditions.get('temperature', ''))) # append temperature_deg_c
@@ -106,6 +111,25 @@ def getAllStoichiometry(keyword):
 
         csvRows.append(csvRow)
 
+    # write header row, done last after counting # solvents/catalysts/products
+    headerRow = [] # object to store header row to write to .csv
+    headerRow.append('source_id')
+    headerRow.append('temperature_deg_c')
+    headerRow.append('time_h')
+    headerRow.append('scale_mol')
+    headerRow.append('concentration_mol_l')
+    for i in range(1, solventCount+1):
+        headerRow.append('solvent_'+str(i)+'_cas')
+    for i in range(1, catalystCount+1):
+        headerRow.append('catalyst_'+str(i)+'_name')
+        headerRow.append('catalyst_'+str(i)+'_cas')
+        headerRow.append('catalyst_'+str(i)+'_smiles')
+        headerRow.append('catalyst_'+str(i)+'_eq')
+    for i in range(1, productCount+1):
+        headerRow.append('product_'+str(i)+'_smiles')
+        headerRow.append('product_'+str(i)+'_yield')
+
+    csvRows.insert(0, headerRow)
     return csvRows
 # endregion
 
